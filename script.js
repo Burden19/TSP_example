@@ -30,9 +30,10 @@ let state = null; // holds algorithm-specific state
 
 function draw(points, bestTour) {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
-    ctx.fillStyle = '#fff';
-// draw edges
-    if (bestTour) {
+    // The canvas background is set in CSS, no need to fill here.
+
+    // draw edges
+    if (bestTour && points.length > 0) {
         ctx.lineWidth = 2;
         ctx.beginPath();
         let a = points[bestTour[0]];
@@ -45,7 +46,7 @@ function draw(points, bestTour) {
         ctx.strokeStyle = 'rgba(30,144,255,0.9)';
         ctx.stroke();
     }
-// points
+    // points
     for (const p of points) {
         ctx.beginPath();
         ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
@@ -54,6 +55,31 @@ function draw(points, bestTour) {
         ctx.strokeStyle = '#60a5fa';
         ctx.stroke();
     }
+}
+
+// ---------- Utilities ----------
+function rand(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function dist(p1, p2) {
+    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+}
+
+function tourDistance(points, tour) {
+    let d = 0;
+    for (let i = 0; i < tour.length - 1; i++) {
+        d += dist(points[tour[i]], points[tour[i + 1]]);
+    }
+    d += dist(points[tour[tour.length - 1]], points[tour[0]]); // return to start
+    return d;
 }
 
 
@@ -77,11 +103,12 @@ function gaInit() {
         shuffle(tour);
         pop.push({tour, score: tourDistance(points, tour)});
     }
+    pop.sort((a, b) => a.score - b.score);
     state = {
         pop,
         gen: 0,
         elite: Math.max(1, Math.floor(popSize * 0.05)),
-        best: pop.reduce((a, b) => a.score < b.score ? a : b)
+        best: pop[0]
     };
 }
 
@@ -222,17 +249,130 @@ function tsStep() {
 function initAlgorithm() {
     const algo = algoSelect.value;
     iter = 0;
-    iterCountSpan.textContent = '0';
+    if (!points.length) return;
     if (algo === 'ga') gaInit(); else if (algo === 'sa') saInit(); else tsInit();
+    updateUI();
+}
+
+function updateUI() {
+    if (!state || !points.length) {
+        currentDistSpan.textContent = '-';
+        bestDistSpan.textContent = '-';
+        iterCountSpan.textContent = '0';
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        if (points.length) draw(points, null);
+        return;
+    }
+    const currentScore = algoSelect.value === 'ga' ? state.pop[0].score : state.score;
+    const bestTour = state.best.tour;
+    const bestScore = state.best.score;
+
+    draw(points, bestTour);
+    currentDistSpan.textContent = Math.round(currentScore);
+    bestDistSpan.textContent = Math.round(bestScore);
+    iterCountSpan.textContent = iter;
 }
 
 function stepAlgorithm() {
     const algo = algoSelect.value;
-    if (!points.length) return;
+    if (!points.length || !state) return;
     if (algo === 'ga') gaStep(); else if (algo === 'sa') saStep(); else tsStep();
     iter++;
-    iterCountSpan.textContent = iter;
-// update UI
-    let best = null;
+    updateUI();
 }
+
+function run() {
+    if (!running) {
+        startBtn.disabled = false;
+        genBtn.disabled = false;
+        cityCountInput.disabled = false;
+        algoSelect.disabled = false;
+        pauseBtn.textContent = 'Pause';
+        return;
+    }
+    if (!paused) {
+        stepAlgorithm();
+    }
+    requestAnimationFrame(run);
+}
+
+// ---------- Event Listeners ----------
+genBtn.addEventListener('click', () => {
+    running = false;
+    const n = +cityCountInput.value;
+    generatePoints(n);
+    initAlgorithm();
+});
+
+startBtn.addEventListener('click', () => {
+    if (!points.length) {
+        genBtn.click();
+    }
+    if (!state) {
+        initAlgorithm();
+    }
+    if (running && !paused) return;
+
+    running = true;
+    paused = false;
+
+    startBtn.disabled = true;
+    genBtn.disabled = true;
+    cityCountInput.disabled = true;
+    algoSelect.disabled = true;
+    pauseBtn.textContent = 'Pause';
+
+    requestAnimationFrame(run);
+});
+
+pauseBtn.addEventListener('click', () => {
+    if (!running) return;
+    paused = !paused;
+    pauseBtn.textContent = paused ? 'Resume' : 'Pause';
+});
+
+stepBtn.addEventListener('click', () => {
+    if (!points.length) {
+        genBtn.click();
+        return;
+    }
+    if (!state) {
+        initAlgorithm();
+    }
+
+    if (running) {
+        paused = true;
+        pauseBtn.textContent = 'Resume';
+    }
+
+    stepAlgorithm();
+});
+
+resetBtn.addEventListener('click', () => {
+    running = false;
+    paused = false;
+    points = [];
+    state = null;
+    iter = 0;
+
+    updateUI(); // This will clear the UI and canvas
+
+    startBtn.disabled = false;
+    genBtn.disabled = false;
+    cityCountInput.disabled = false;
+    algoSelect.disabled = false;
+    pauseBtn.textContent = 'Pause';
+});
+
+algoSelect.addEventListener('change', () => {
+    // When algorithm changes, re-initialize
+    if (points.length) {
+        running = false;
+        initAlgorithm();
+    }
+});
+
+// Initial setup
+genBtn.click();
+
 }); // end of DOMContentLoaded
