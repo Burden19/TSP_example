@@ -1,3 +1,4 @@
+document.addEventListener("DOMContentLoaded", () => {
 // script.js — TSP visualizer with GA, SA, Tabu Search
 // ---------- Canvas & UI ----------
 const canvas = document.getElementById('tspCanvas');
@@ -234,3 +235,4 @@ function stepAlgorithm() {
 // update UI
     let best = null;
 }
+}); // end of DOMContentLoaded
