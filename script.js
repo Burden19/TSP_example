@@ -283,15 +283,23 @@ function stepAlgorithm() {
 
 function run() {
     if (!running) {
+        // This block runs when the simulation stops or is reset
         startBtn.disabled = false;
         genBtn.disabled = false;
         cityCountInput.disabled = false;
+        iterationsInput.disabled = false; // Re-enable iterations input
         algoSelect.disabled = false;
         pauseBtn.textContent = 'Pause';
         return;
     }
     if (!paused) {
-        stepAlgorithm();
+        const maxIter = +iterationsInput.value;
+        if (iter < maxIter) {
+            stepAlgorithm();
+        } else {
+            // Stop the simulation when max iterations are reached
+            running = false;
+        }
     }
     requestAnimationFrame(run);
 }
@@ -319,6 +327,7 @@ startBtn.addEventListener('click', () => {
     startBtn.disabled = true;
     genBtn.disabled = true;
     cityCountInput.disabled = true;
+    iterationsInput.disabled = true; // Disable iterations input during run
     algoSelect.disabled = true;
     pauseBtn.textContent = 'Pause';
 
@@ -360,6 +369,7 @@ resetBtn.addEventListener('click', () => {
     startBtn.disabled = false;
     genBtn.disabled = false;
     cityCountInput.disabled = false;
+    iterationsInput.disabled = false; // Re-enable iterations input
     algoSelect.disabled = false;
     pauseBtn.textContent = 'Pause';
 });
