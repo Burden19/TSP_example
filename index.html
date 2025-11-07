@@ -1,0 +1,73 @@
+<!doctype html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>TSP Visualizer — Algorithmes heuristiques</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+    <h1>TSP Visualizer</h1>
+    <p>Visualisation en direct de l'algorithme — Genetic, Simulated Annealing, Tabu Search.</p>
+</header>
+
+
+<main>
+    <section class="controls">
+        <label>Algorithme:
+            <select id="algoSelect">
+                <option value="ga">Algorithme génétique (GA)</option>
+                <option value="sa">Recuit simulé (SA)</option>
+                <option value="ts">Tabu Search (TS)</option>
+            </select>
+        </label>
+
+
+        <label>Villes:
+            <input id="cityCount" type="number" min="4" max="200" value="25">
+        </label>
+
+
+        <label>Population / Itérations:
+            <input id="iterations" type="number" min="1" max="100000" value="500">
+        </label>
+
+
+        <div class="buttons">
+            <button id="genPoints">Générer points</button>
+            <button id="startBtn">Démarrer</button>
+            <button id="pauseBtn">Pause</button>
+            <button id="stepBtn">Étape</button>
+            <button id="resetBtn">Réinitialiser</button>
+        </div>
+
+
+        <div class="links">
+            <a id="pyGa" href="python/genetic_tsp.py">Script Python — GA</a>
+            <a id="pySa" href="python/simulated_annealing_tsp.py">Script Python — SA</a>
+            <a id="pyTs" href="python/tabu_search_tsp.py">Script Python — TS</a>
+        </div>
+
+
+        <div class="stats">
+            <div>Distance courante: <span id="currentDist">-</span></div>
+            <div>Meilleure distance: <span id="bestDist">-</span></div>
+            <div>Itérations: <span id="iterCount">0</span></div>
+        </div>
+    </section>
+
+
+    <section class="canvasWrap">
+        <canvas id="tspCanvas" width="900" height="600"></canvas>
+    </section>
+</main>
+
+
+<footer>
+    <small>Conçu pour GitHub Pages — tout s'exécute côté client (JavaScript).</small>
+</footer>
+
+
+<script src="script.js"></script>
+</body>
+</html>
