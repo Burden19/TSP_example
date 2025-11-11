@@ -62,4 +62,4 @@ Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou à
 - Construit avec JavaScript, HTML et CSS pour la simplicité et la facilité d'utilisation.
 
 ## Contact
-Pour toute question ou retour, veuillez contacter [Ahmed Mbarek] à [ahmedmbarek61@gmail.com].
+Pour toute question ou retour, veuillez contacter Ahmed Mbarek à ahmedmbarek61@gmail.com.
