@@ -18,7 +18,7 @@ Ce projet est un visualiseur web pour résoudre le problème du voyageur de comm
 1. **Cloner le Répertoire** :
    ```bash
    git clone https://github.com/Burden19/TSP_example
-   cd tsp-visualizer
+   cd TSP_example
    ```
 
 2. **Ouvrir le Projet** :
