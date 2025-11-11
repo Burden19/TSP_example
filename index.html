@@ -8,7 +8,7 @@
 <body>
 <header>
     <h1>TSP Visualizer</h1>
-    <p>Visualisation en direct de l'algorithme — Genetic, Simulated Annealing, Tabu Search.</p>
+    <p>Visualisation en direct de l'algorithme — Genetic, Simulated Annealing, Tabu Search, PSO (Random Keys).</p>
 </header>
 
 
@@ -19,19 +19,33 @@
                 <option value="ga">Algorithme génétique (GA)</option>
                 <option value="sa">Recuit simulé (SA)</option>
                 <option value="ts">Tabu Search (TS)</option>
+                <option value="pso">PSO (Random Keys)</option>
             </select>
         </label>
-
 
         <label>Villes:
             <input id="cityCount" type="number" min="4" max="200" value="25">
         </label>
 
-
         <label>Population / Itérations:
             <input id="iterations" type="number" min="1" max="100000" value="500">
         </label>
 
+        <!-- PSO controls (shown only when PSO selected) -->
+        <div id="psoControls" style="display:none; margin-top:8px;">
+            <label>Particules:
+                <input id="psoParticles" type="number" min="4" max="500" value="30">
+            </label>
+            <label>Inertie (W):
+                <input id="psoW" type="number" step="0.05" min="0" max="2" value="0.7">
+            </label>
+            <label>C1 (cognitif):
+                <input id="psoC1" type="number" step="0.1" min="0" max="4" value="1.5">
+            </label>
+            <label>C2 (social):
+                <input id="psoC2" type="number" step="0.1" min="0" max="4" value="1.5">
+            </label>
+        </div>
 
         <div class="buttons">
             <button id="genPoints">Générer points</button>
@@ -41,13 +55,12 @@
             <button id="resetBtn">Réinitialiser</button>
         </div>
 
-
         <div class="links">
             <a id="pyGa" href="python/genetic_tsp.py">Script Python — GA</a>
             <a id="pySa" href="python/simulated_annealing_tsp.py">Script Python — SA</a>
             <a id="pyTs" href="python/tabu_search_tsp.py">Script Python — TS</a>
+            <a id="pyPso" href="python/rk_pso_tsp.py">Script Python — RK-PSO (Random Keys)</a>
         </div>
-
 
         <div class="stats">
             <div>Distance courante: <span id="currentDist">-</span></div>
@@ -62,11 +75,9 @@
     </section>
 </main>
 
-
 <footer>
     <small>Conçu pour GitHub Pages — tout s'exécute côté client (JavaScript).</small>
 </footer>
-
 
 <script src="script.js" defer></script>
 </body>

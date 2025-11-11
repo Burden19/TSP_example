@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-// script.js — TSP visualizer with GA, SA, Tabu Search
+// script.js — TSP visualizer with GA, SA, Tabu Search, and PSO (Random Keys)
 // ---------- Canvas & UI ----------
 const canvas = document.getElementById('tspCanvas');
 const ctx = canvas.getContext('2d');
@@ -15,11 +15,14 @@ const currentDistSpan = document.getElementById('currentDist');
 const bestDistSpan = document.getElementById('bestDist');
 const iterCountSpan = document.getElementById('iterCount');
 
+const psoControls = document.getElementById('psoControls');
+const psoParticlesInput = document.getElementById('psoParticles');
+const psoWInput = document.getElementById('psoW');
+const psoC1Input = document.getElementById('psoC1');
+const psoC2Input = document.getElementById('psoC2');
 
 let WIDTH = canvas.width, HEIGHT = canvas.height;
-window.addEventListener('resize', () => {/*no-op for now*/
-});
-
+window.addEventListener('resize', () => {/*no-op for now*/});
 
 let points = [];
 let running = false;
@@ -27,11 +30,8 @@ let paused = false;
 let iter = 0;
 let state = null; // holds algorithm-specific state
 
-
 function draw(points, bestTour) {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
-    // The canvas background is set in CSS, no need to fill here.
-
     // draw edges
     if (bestTour && points.length > 0) {
         ctx.lineWidth = 2;
@@ -82,6 +82,12 @@ function tourDistance(points, tour) {
     return d;
 }
 
+// Decode Random Keys -> permutation (JS version)
+function decodeRandomKeys(keys) {
+    const keyed = keys.map((v, i) => ({v, i}));
+    keyed.sort((a, b) => a.v - b.v);
+    return keyed.map(x => x.i);
+}
 
 // ---------- Data generation ----------
 function generatePoints(n) {
@@ -91,7 +97,6 @@ function generatePoints(n) {
         points.push({x: rand(pad, WIDTH - pad), y: rand(pad, HEIGHT - pad)});
     }
 }
-
 
 // ---------- Genetic Algorithm (GA) ----------
 function gaInit() {
@@ -166,7 +171,6 @@ function mutate(tour, rate) {
     }
 }
 
-
 // ---------- Simulated Annealing (SA) ----------
 function saInit() {
     const n = points.length;
@@ -195,7 +199,6 @@ function saStep() {
     }
     s.temp *= s.cooling;
 }
-
 
 // ---------- Tabu Search (TS) ----------
 function tsInit() {
@@ -244,13 +247,94 @@ function tsStep() {
     }
 }
 
+// ---------- PSO (Random Keys) ----------
+function psoInit() {
+    const n = points.length;
+    const npart = Math.max(4, Math.min(500, +psoParticlesInput.value || 30));
+    const W = parseFloat(psoWInput.value) || 0.7;
+    const C1 = parseFloat(psoC1Input.value) || 1.5;
+    const C2 = parseFloat(psoC2Input.value) || 1.5;
 
-// ---------- Runner ----------
+    // Each particle: position (random keys), velocity, pbest_pos, pbest_score
+    const particles = [];
+    let gbest_pos = null;
+    let gbest_score = Infinity; // distance (lower is better)
+
+    for (let i = 0; i < npart; i++) {
+        const pos = Array.from({length: n}, () => rand(0, 10));
+        const vel = Array.from({length: n}, () => 0);
+        const tour = decodeRandomKeys(pos);
+        const score = tourDistance(points, tour);
+        const pbest_pos = pos.slice();
+        const pbest_score = score;
+        if (score < gbest_score) {
+            gbest_score = score;
+            gbest_pos = pos.slice();
+        }
+        particles.push({position: pos, velocity: vel, pbest_pos, pbest_score});
+    }
+
+    state = {
+        algo: 'pso',
+        particles,
+        gbest_pos,
+        gbest_score,
+        params: {W, C1, C2},
+        best: {tour: decodeRandomKeys(gbest_pos), score: gbest_score}
+    };
+}
+
+function psoStep() {
+    const s = state;
+    const {W, C1, C2} = s.params;
+    const n = points.length;
+
+    // 1) Update pbest and gbest based on current positions
+    for (let p of s.particles) {
+        const tour = decodeRandomKeys(p.position);
+        const score = tourDistance(points, tour);
+        if (score < p.pbest_score) {
+            p.pbest_score = score;
+            p.pbest_pos = p.position.slice();
+        }
+        if (score < s.gbest_score) {
+            s.gbest_score = score;
+            s.gbest_pos = p.position.slice();
+            s.best.tour = tour.slice();
+            s.best.score = score;
+        }
+    }
+
+    // 2) Update velocity and position
+    for (let p of s.particles) {
+        for (let k = 0; k < n; k++) {
+            const r1 = Math.random();
+            const r2 = Math.random();
+            const cognitive = C1 * r1 * (p.pbest_pos[k] - p.position[k]);
+            const social = C2 * r2 * (s.gbest_pos[k] - p.position[k]);
+            p.velocity[k] = W * p.velocity[k] + cognitive + social;
+            p.position[k] = p.position[k] + p.velocity[k];
+            // clamp to a sensible range (to avoid huge keys)
+            if (p.position[k] < 0) p.position[k] = 0;
+            if (p.position[k] > 10) p.position[k] = 10;
+        }
+    }
+
+    // after movement, we update best for UI (gbest already updated above)
+}
+
+// ---------- Runner & UI integration ----------
 function initAlgorithm() {
     const algo = algoSelect.value;
     iter = 0;
+    state = null;
     if (!points.length) return;
-    if (algo === 'ga') gaInit(); else if (algo === 'sa') saInit(); else tsInit();
+
+    if (algo === 'ga') gaInit();
+    else if (algo === 'sa') saInit();
+    else if (algo === 'ts') tsInit();
+    else if (algo === 'pso') psoInit();
+
     updateUI();
 }
 
@@ -263,31 +347,55 @@ function updateUI() {
         if (points.length) draw(points, null);
         return;
     }
-    const currentScore = algoSelect.value === 'ga' ? state.pop[0].score : state.score;
-    const bestTour = state.best.tour;
-    const bestScore = state.best.score;
+
+    let currentScore = '-';
+    let bestScore = '-';
+    let bestTour = null;
+
+    const algo = algoSelect.value;
+    if (algo === 'ga') {
+        currentScore = Math.round(state.pop[0].score);
+        bestScore = Math.round(state.best.score);
+        bestTour = state.best.tour;
+    } else if (algo === 'sa') {
+        currentScore = Math.round(state.score);
+        bestScore = Math.round(state.best.score);
+        bestTour = state.best.tour;
+    } else if (algo === 'ts') {
+        currentScore = Math.round(state.score);
+        bestScore = Math.round(state.best.score);
+        bestTour = state.best.tour;
+    } else if (algo === 'pso') {
+        currentScore = Math.round(state.gbest_score);
+        bestScore = Math.round(state.best.score);
+        bestTour = state.best.tour;
+    }
 
     draw(points, bestTour);
-    currentDistSpan.textContent = Math.round(currentScore);
-    bestDistSpan.textContent = Math.round(bestScore);
+    currentDistSpan.textContent = currentScore;
+    bestDistSpan.textContent = bestScore;
     iterCountSpan.textContent = iter;
 }
 
 function stepAlgorithm() {
     const algo = algoSelect.value;
     if (!points.length || !state) return;
-    if (algo === 'ga') gaStep(); else if (algo === 'sa') saStep(); else tsStep();
+    if (algo === 'ga') gaStep();
+    else if (algo === 'sa') saStep();
+    else if (algo === 'ts') tsStep();
+    else if (algo === 'pso') psoStep();
+
     iter++;
     updateUI();
 }
 
 function run() {
     if (!running) {
-        // This block runs when the simulation stops or is reset
+        // UI reset when stopped
         startBtn.disabled = false;
         genBtn.disabled = false;
         cityCountInput.disabled = false;
-        iterationsInput.disabled = false; // Re-enable iterations input
+        iterationsInput.disabled = false;
         algoSelect.disabled = false;
         pauseBtn.textContent = 'Pause';
         return;
@@ -297,7 +405,6 @@ function run() {
         if (iter < maxIter) {
             stepAlgorithm();
         } else {
-            // Stop the simulation when max iterations are reached
             running = false;
         }
     }
@@ -375,12 +482,21 @@ resetBtn.addEventListener('click', () => {
 });
 
 algoSelect.addEventListener('change', () => {
+    const algo = algoSelect.value;
+    // Show/hide PSO controls
+    if (algo === 'pso') psoControls.style.display = '';
+    else psoControls.style.display = 'none';
+
     // When algorithm changes, re-initialize
     if (points.length) {
         running = false;
         initAlgorithm();
     }
 });
+
+// Ensure PSO control visibility on load
+if (algoSelect.value === 'pso') psoControls.style.display = '';
+else psoControls.style.display = 'none';
 
 // Initial setup
 genBtn.click();
